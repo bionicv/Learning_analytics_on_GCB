@@ -1,0 +1,8 @@
+modules/dashboard/dashboard.py
+views/unit.html 
+main.py 
+controllers/lessons.py
+models/models.py
+
+A seperate program called dummy.py (found at the root directory)
+
