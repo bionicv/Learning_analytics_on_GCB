@@ -1,0 +1,4 @@
+Changelog:
+- Dashboard.py modified to genelarize assessment analytics, new plots adding for the youtube events
+- Modified dummy.py to correct a typo mistake that made that the program did not work
+It contains the name of the person that have modified each part

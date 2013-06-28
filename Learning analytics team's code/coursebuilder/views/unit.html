@@ -1,0 +1,240 @@
+{#
+#################################################################################
+## ***************************Code modified by: ********************************
+## *********** Miriam Marciel (miriam.marciel@imdea.org) **************************
+## *work done as part of the class "Platforms for network communities" 2012-2013
+## ************** University: "Universidad Carlos III de Madrid" *****************
+#################################################################################
+#}
+{% extends 'base.html' %}
+
+{% block subtitle %}
+  Lesson
+{% endblock subtitle %}
+
+{% block top_content %}
+{% endblock %}
+
+{% block main_content %}
+
+<div class="gcb-main">
+  {% if is_read_write_course and is_course_admin %}
+    <a href="dashboard?action=edit_unit&key={{ unit_id }}"
+      class="gcb-button gcb-button-action">Edit unit</a>
+    <a href="dashboard?action=edit_lesson&key={{ lesson_id }}"
+      class="gcb-button gcb-button-action">Edit lesson</a>
+  {% endif %}
+  <ul class="gcb-breadcrumb">
+    <li><a href="course">{% trans %} Course {% endtrans %}</a></li>
+    <li><a href="unit?unit={{ unit.unit_id }}">
+      {% trans %} Unit {% endtrans %}{{ unit.index }}</a></li>
+    <li>{% trans %} Lesson {% endtrans %}{{ lesson.index }}</li>
+  </ul>
+  <div>
+    <h1 class="class_header">
+      {{ gettext('Unit %(id)s - %(title)s', id=unit.index, title=unit.title) }}
+    </h1>
+  </div>
+
+  {% include 'lesson_navbar.html' %}
+
+  <div class="gcb-article tab-content" role="main">
+    {{course_info.unit.after_content_begins | safe}}
+    {% for lesson in lessons %}
+      {% if lesson.lesson_id == lesson_id %}
+
+        <div style="padding-bottom: 20px;">
+          <div class="gcb-aside gcb-button-box">
+            {% if lesson.now_available or is_course_admin %}
+              <div class="gcb-cols">
+                <div class="gcb-col-7">
+                  <h1 class="lesson_title">
+                    {{ lesson.title }}
+                    {% if not lesson.now_available and is_course_admin %}
+                      <span id="lesson-title-private">
+                        (Private)
+                      </span>
+                    {% endif %}
+                  </h1>
+
+                  {% if lesson.objectives %}
+                    <div class="lesson_objective">
+                      {{ lesson.objectives | safe }}
+                    </div>
+                  {% endif %}
+
+                </div>
+                <div class="gcb-col-3">
+                  <p style="float:right; margin-top: 0px;">
+                    <a role="button" class="gcb-button gcb-button-primary" href="{{ lesson.notes }}" target="_blank">
+                      {% trans %} Text Version {% endtrans %}
+                    </a>
+                  </p>
+                </div>
+              </div><!-- /gcb-cols -->
+              {% if lesson.video %}
+                <p class="video-container">
+				{#
+				##########################################################################################
+				################### Miriam MARCIEL's CODE STARTING POINT #################################
+				######### Role: HTML and Javascript code to collect and send YoutubeEvents  ##############
+				##########################################################################################  #}
+                  <iframe id="player" class="youtube-player" title="{% trans %} YouTube Video Player {% endtrans %}"
+                          type="text/html" width="650" height="400" frameborder="0" allowfullscreen
+                          src="https://www.youtube.com/embed/{{ lesson.video }}?feature=player_embedded&rel=0"> 
+                  </iframe>
+                </p>
+                <div id="events"></div>
+                <div id="videoid" class={{ lesson.video }} />
+
+    <script>
+      var tag = document.createElement('script');
+      tag.src = "https://www.youtube.com/iframe_api";
+      var firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
+      var lastState;
+      var state;
+      var lastCurrentTime;
+      var player;
+      var videoID=document.getElementById('videoid').className;
+      function onYouTubeIframeAPIReady() {
+        player = new YT.Player('player', {
+          events: {
+            'onStateChange': onPlayerStateChange
+          }
+        });
+      }
+      setTimeout(currentTime,1000);
+      
+      function onPlayerStateChange(event) {
+        state=event.data;
+        var youtubeEvent;
+        if(state==-1){
+       		state="UNSTARTED";
+       		lastState=-1;
+       		//print(state);
+        }
+        else if(state==YT.PlayerState.PAUSED){        	
+       		state="PAUSED";
+       		if(lastState==YT.PlayerState.PAUSED){
+       			state="FORWARD/REWIND";
+       			lastState=10; //Forward/Rewind event
+       			currentTime=player.getCurrentTime();
+       			if(currentTime>lastCurrentTime){
+       				//print("FORWARD");
+              youtubeEvent={"timeStart":lastCurrentTime,"timeEnd":currentTime};
+              sendYouTubeEvent("forward",youtubeEvent);
+       			}
+       			else if(currentTime<lastCurrentTime){
+       				//print("REWIND");
+              youtubeEvent={"timeStart":lastCurrentTime,"timeEnd":currentTime};
+              sendYouTubeEvent("rewind",youtubeEvent);
+       			}
+       			lastCurrentTime=player.getCurrentTime();
+       			
+       		}
+       		else lastState=YT.PlayerState.PAUSED;
+        }
+        else if(state==YT.PlayerState.ENDED){
+        	state="ENDED";
+        	lastState=YT.PlayerState.ENDED;
+        	//print(state);
+          sendYouTubeEvent("ended",youtubeEvent)
+        }
+        else if(state==YT.PlayerState.PLAYING){
+        	state="PLAYING";
+        	if(lastState==YT.PlayerState.PAUSED){
+        		//print("PAUSED AND PLAYING");
+            currentTime=player.getCurrentTime();
+            youtubeEvent={"time":currentTime};
+            sendYouTubeEvent("pause",youtubeEvent);
+        	}
+        	else if(lastState==-1){
+        		//print("STARTING PLAYING");
+            sendYouTubeEvent("started",youtubeEvent);
+        	}
+        	lastState=YT.PlayerState.PLAYING;
+        }
+        else if(state==YT.PlayerState.BUFFERING){
+	        state="BUFFERING";
+	        lastState=YT.PlayerState.BUFFERING;
+	        //print(state);
+        }
+        else if(state==YT.PlayerState.CUED){
+        	state="CUED";
+        	lastState=YT.PlayerState.CUED;
+        	//print(state);
+        }
+
+      }
+      
+      function currentTime(){
+   	    lastCurrentTime=player.getCurrentTime();
+      	setTimeout(currentTime,1000);
+      }
+      
+      function print(state){
+         var element=document.createElement('p');
+	       element.appendChild(document.createTextNode("Event "+state));        
+	       var div=document.getElementById("events");
+	       div.appendChild(element);
+      }
+
+      function sendYouTubeEvent(event,jsonString){
+        var form={"video":videoID,"event":event,"info":JSON.stringify(jsonString)};
+        $.ajax({
+            type: "post",
+            url: "/youtubeevent",
+            data: form,
+            success: function(data) {
+              
+            }
+        })
+
+      }
+    </script>
+              {% endif %}
+
+            {% else %}
+
+              <h1 class="lesson_title">
+                {{ lesson.title }}
+              </h1>
+
+              <br><br>
+
+              <div>
+                {% trans %} This lesson is not available. {% endtrans %}
+              </div>
+
+            {% endif %}
+          </div><!-- /gcb-aside -->
+
+          <div class="gcb-button-box">
+            <div class="prev-button" style="float:left; margin-top: 0px; margin-left: 40px;">
+              {% if back_button_url %}
+                <a href="{{ back_button_url }}">
+                  {% trans %} Previous Page {% endtrans %}
+                </a>
+              {% endif %}
+            </div>
+            <div class="next-button" style="float:right; margin-top: 0px; margin-right: 40px;">
+              {% if next_button_url %}
+                <a href="{{ next_button_url }}">
+                  {% trans %} Next Page {% endtrans %}
+                </a>
+              {% else %}
+                <a href="course">
+                  {% trans %} End {% endtrans %}
+                </a>
+              {% endif %}
+            </div>
+          </div>
+        </div>
+      {% endif %}
+    {% endfor %}
+    {{course_info.unit.before_content_ends | safe}}
+  </div>
+</div>
+
+{% endblock %}
